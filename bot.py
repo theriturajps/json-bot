@@ -1,74 +1,92 @@
-const { Telegraf, Markup } = require('telegraf');
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import requests
+import json
 
-if (process.env.BOT_TOKEN === undefined) {
-  throw new TypeError('BOT_TOKEN must be provided!');
-}
+# URL for the online db.json file
+DB_JSON_URL = "https://drive.google.com/uc?export=download&id=1VXwNHpPQI5q0g51AKL4iPew1tLg_HzMf"
 
-const keyboard = Markup.inlineKeyboard([
-  Markup.button.url('Developer', 'https://t.me/RituRajPS'),
-  Markup.button.callback('Delete', 'delete'),
-]);
+# Function to fetch data from the online db.json file
+def fetch_bot_data():
+    response = requests.get(DB_JSON_URL)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Failed to fetch data from {DB_JSON_URL}")
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+def format_buttons(buttons_data):
+    buttons_layout = []
+    for button_data in buttons_data:
+        button_row = [InlineKeyboardButton(button_name, url=button_url) for button_name, button_url in button_data.items()]
+        buttons_layout.append(button_row)
+    return buttons_layout
 
-bot.start((ctx) => ctx.reply('Hello'));
-bot.help((ctx) => ctx.reply('Help message'));
-bot.action('delete', (ctx) => ctx.deleteMessage());
-bot.command('photo', (ctx) => ctx.replyWithPhoto({ url: 'https://picsum.photos/200/300/?random' }));
+def start(update: Update, context: CallbackContext):
+    for bot_command_data in bot_data:
+        if "BotName" in bot_command_data:
+            bot_name = bot_command_data["BotName"]
+            update.message.reply_text(f"Hi! I'm {bot_name}, Use /list command to explore.")
+            break
+    else:
+        update.message.reply_text("Hi! I'm your bot.")  # If "BotName" is not found in the db.json file
 
-// New function to copy a replied message to the DB_CHANNEL and reply to the user
-bot.command('upmedia', async (ctx) => {
-  if (process.env.COPY_MESSAGE === 'active') {
-    // Check if the user replied to a message
-    if (!ctx.message.reply_to_message) {
-      return ctx.reply('Please reply to a message you want to upload.');
-    }
+def handle_command(update: Update, context: CallbackContext):
+    command = update.message.text.strip()
+    for bot_command_data in bot_data:
+        if "commands" in bot_command_data and command in bot_command_data["commands"]:
+            message = bot_command_data.get("message", "")
+            image_url = bot_command_data.get("image", None)
+            buttons_data = bot_command_data.get("buttons", [])
 
-    const dbChannelId = process.env.DB_CHANNEL;
+            # Create an InlineKeyboardMarkup object with the buttons
+            reply_markup = InlineKeyboardMarkup(format_buttons(buttons_data))
 
-    try {
-      // Copy the replied message to the DB_CHANNEL
-      const message = await ctx.telegram.copyMessage(dbChannelId, ctx.chat.id, ctx.message.reply_to_message.message_id, keyboard);
-      ctx.reply(`Your message is successfully stored\n\nMessage ID: ${message.message_id},\n\nPlease use "/get ${message.message_id}" to retrieve`);
-    } catch (error) {
-      ctx.reply('Error: Message not found or could not be copied.');
-    }
-  } else {
-    ctx.reply('This function is disabled by admin.');
-  }
-});
+            # Send the message and buttons
+            if message:
+                if image_url and image_url != "none":
+                    # Send the image with the message and buttons
+                    update.message.reply_photo(photo=image_url, caption=message, reply_markup=reply_markup)
+                else:
+                    # Send the message and buttons without the image
+                    update.message.reply_text(message, reply_markup=reply_markup)
 
-// New function to copy a message from the channel and send it to the user
-bot.command('get', async (ctx) => {
-  if (process.env.COPY_MESSAGE === 'active') {
-    const input = ctx.message.text.split(' ');
-    if (input.length !== 2) {
-      return ctx.reply('Invalid command format. Please use /get message_id.');
-    }
+            # Break the loop once the command is found
+            break
+    else:
+        update.message.reply_text("I'm sorry, I don't understand that command. Type /about, /help, or /dev to get started.")
 
-    const messageId = input[1];
-    const dbChannelId = process.env.DB_CHANNEL;
+def main():
+    # Load data from the online db.json file
+    try:
+        global bot_data
+        bot_data = fetch_bot_data()
 
-    try {
-      const message = await ctx.telegram.copyMessage(ctx.from.id, dbChannelId, messageId, keyboard);
-      ctx.reply('Here is your requested file 🙂', {
-        reply_to_message_id: message.message_id,
-      });
-    } catch (error) {
-      ctx.reply('Error: Message not found or could not be copied.');
-    }
-  } else {
-    ctx.reply('This function is disabled by admin.');
-  }
-});
+        # Fetch the bot token from db.json
+        for bot_info in bot_data:
+            if "BotToken" in bot_info:
+                BOT_TOKEN = bot_info["BotToken"]
+                break
+        else:
+            raise Exception("BotToken not found in db.json")
 
-bot.launch({
-  webhook: {
-    domain: process.env.BOT_DOMAIN,
-    hookPath: '/api/echo-bot',
-  },
-});
+        updater = Updater(BOT_TOKEN)
+        dp = updater.dispatcher
 
-// Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+        # Add command handlers dynamically for each command in bot_data
+        for bot_command_data in bot_data:
+            commands = bot_command_data.get("commands", [])
+            for command in commands:
+                dp.add_handler(CommandHandler(command[1:], handle_command))
+
+        # Add the start command handler
+        dp.add_handler(CommandHandler("start", start))
+
+        updater.start_polling()
+        updater.idle()
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return
+
+if __name__ == "__main__":
+    main()
