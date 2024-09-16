@@ -1,0 +1,40 @@
+[
+    {
+        "BotName": "Pro Tool Bot",
+        "BotToken": "6529582468:AAHyKmp8yvfen4sbDWTlEvfpxgtHYWhV9xQ"
+    },
+    {
+        "commands": ["/list"],
+        "message": "Here are the available commands that you can use in this bot.\n\n- /help\n- /dev\n\nMore Comming Soon",
+        "image": "none",
+        "buttons": [
+            {
+                "Developer": "tg://user?id=6043695322"
+            }
+        ]
+    },
+    {
+        "commands": ["/help"],
+        "message": "This is about and help message.\n\nUse /list command",
+        "image": "https://storage.needpix.com/rsynced_images/help-wanted-28601279301985yVz2.jpg",
+        "buttons": [
+            {
+                "button name 1": "https://github.com/theriturajps?tab=repositories",
+                "button name 2": "https://github.com/theriturajps?tab=repositories"
+            },
+            {
+                "button name 3": "https://github.com/theriturajps?tab=repositories"
+            }
+        ]
+    },
+    {
+        "commands": ["/dev"],
+        "message": "This bot is develop by me.",
+        "image": "https://www.explore-group.com/storage/images/interruptions2.jpg",
+        "buttons": [
+            {
+                "Developer": "tg://user?id=6043695322"
+            }
+        ]
+    }
+]
