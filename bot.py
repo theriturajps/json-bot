@@ -4,7 +4,7 @@ import requests
 import json
 
 # URL for the online db.json file
-DB_JSON_URL = "https://drive.google.com/uc?export=download&id=1VXwNHpPQI5q0g51AKL4iPew1tLg_HzMf"
+DB_JSON_URL = "https://127.0.0.1/db.json"
 
 # Function to fetch data from the online db.json file
 def fetch_bot_data():
